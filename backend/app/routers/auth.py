@@ -40,20 +40,34 @@ async def login(user_credentials: UserLogin):
     access_token = create_access_token(data={"sub": user_credentials.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(auth_scheme),
 ) -> User:
     if credentials is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
+        )
 
     token = credentials.credentials
     payload = decode_access_token(token)
     if payload is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
 
     email = payload.get("sub")
     if email is None or email not in fake_users_db:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+        )
 
     user_data = fake_users_db[email]
     return User(id=user_data["id"], email=user_data["email"])
+
+
+@router.get("/me", response_model=User)
+async def read_current_user(
+    current_user: User = Depends(get_current_user),
+):
+    return current_user
